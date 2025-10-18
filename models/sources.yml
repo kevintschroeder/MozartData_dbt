@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: api_data
+    schema: api_ingest
+    tables:
+      - name: raw_data
+        description: "Raw API data ingested from custom API source."
