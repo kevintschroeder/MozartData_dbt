@@ -1,0 +1,21 @@
+# dbt_project.yml
+
+name: 'my_project'
+version: '1.0.0'
+config-version: 2
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  my_project:
+    +materialized: view
+
+    staging:
+      +schema: api_staging
+      +materialized: table
+
+    marts:
+      +schema: analytics
+      +materialized: table
