@@ -6,7 +6,7 @@ with source as (
 
 cleaned as (
     select
-        id::string as record_id,
+        externalid::string as id,
         name::string as record_name,
         value::float as numeric_value,
         try_to_timestamp(updated_at) as updated_at
