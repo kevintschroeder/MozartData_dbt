@@ -6,7 +6,6 @@ with base as (
 
 aggregated as (
     select
-        record_name,
         count(*) as total_records,
         avg(numeric_value) as avg_value,
         max(updated_at) as last_updated
