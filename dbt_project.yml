@@ -1,21 +1,16 @@
 # dbt_project.yml
 
-name: 'my_project'
-version: '1.0.0'
+name: 'mozart_api_project'
+version: '1.0'
 config-version: 2
 
+profile: 'mozart'   # 👈 MUST be exactly 'mozart'
+
 model-paths: ["models"]
+
 target-path: "target"
-clean-targets: ["target", "dbt_packages"]
+clean-targets: ["target", "dbt_modules"]
 
 models:
-  my_project:
+  mozart_api_project:
     +materialized: view
-
-    staging:
-      +schema: api_staging
-      +materialized: table
-
-    marts:
-      +schema: analytics
-      +materialized: table
