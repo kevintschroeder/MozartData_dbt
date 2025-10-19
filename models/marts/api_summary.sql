@@ -10,4 +10,4 @@ aggregated as (
     from base
 )
 
-select * from aggregated;
+select * from aggregated
