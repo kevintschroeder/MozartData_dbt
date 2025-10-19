@@ -1,39 +1,42 @@
 import requests
 import json
-import os
-import pandas as pd
 
-# GraphQL endpoint URL
-url_signin = 'https://beanworks.ca/signin'
+def get_token():
+    """
+    Logs in to Beanworks and returns the access token and root org unit ID.
+    """
+    # GraphQL endpoint URL
+    url_signin = 'https://beanworks.ca/signin'
 
-# Create a dictionary for the form data (username and password)
-data = {
-    'username': 'kevin.schroedre@candelarenewables.com',
-    'password': 'Ry@n20191122',
-}
+    # Login credentials
+    data = {
+        'username': 'kevin.schroedre@candelarenewables.com',
+        'password': 'Ry@n20191122',
+    }
 
-# Set the headers for the request
-headers = {
-    'Content-Type': 'application/x-www-form-urlencoded',
-}
+    # Request headers
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+    }
 
-# Send the POST request with the form data
-response = requests.post(url_signin, data=data, headers=headers)
+    # Send POST request
+    response = requests.post(url_signin, data=data, headers=headers)
 
-response_1 = response.text
- 
-# Parse JSON response
+    # Parse JSON response
+    parsed_response = json.loads(response.text)
 
-parsed_response = json.loads(response_1)
- 
-# Extract values
+    # Extract token and root org unit ID
+    access_token = parsed_response.get("accessToken", "")
+    root_org_unit_id = parsed_response.get("rootOrgUnitId", "")
 
-access_token = parsed_response.get("accessToken", "") #.rstrip(",")  # Remove trailing comma if present
+    # Optional: print for verification
+    print(f"Access Token: {access_token}")
+    print(f"Root Org Unit ID: {root_org_unit_id}")
 
-root_org_unit_id = parsed_response.get("rootOrgUnitId", "")
- 
-# Print values
+    # Return values so they can be used by other scripts
+    return access_token, root_org_unit_id
 
-print(f"Access Token: {access_token}")
 
-print(f"Root Org Unit ID: {root_org_unit_id}")
+# Optional: run standalone for testing
+if __name__ == "__main__":
+    token, rouid = get_token()
