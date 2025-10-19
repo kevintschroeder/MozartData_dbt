@@ -6,11 +6,8 @@ with base as (
 
 aggregated as (
     select
-        count(*) as total_records,
-        avg(numeric_value) as avg_value,
-        max(updated_at) as last_updated
+        count(ID) as total_records
     from base
-    group by 1
 )
 
-select * from aggregated
+select * from aggregated;
