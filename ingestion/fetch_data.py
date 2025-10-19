@@ -34,3 +34,5 @@ def fetch(access_token, root_org_unit_id):
 
     # Return a list of dicts like [{'externalid': '12345'}, ...]
     return [{"externalid": item["node"]["externalId"]} for item in invoices]
+
+print(f"{len(rows)} rows inserted into api_ingest.raw_data")
