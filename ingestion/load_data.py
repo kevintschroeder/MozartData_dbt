@@ -1,76 +1,70 @@
 # load_data.py
 import os
+import pandas as pd
 import snowflake.connector
+from dotenv import load_dotenv
 
+# Load environment variables from .env
+load_dotenv()
 
-def get_snowflake_conn_from_env():
+# Read Snowflake credentials from environment variables
+SNOWFLAKE_USER = os.getenv("SNOWFLAKE_USER")
+SNOWFLAKE_PASSWORD = os.getenv("SNOWFLAKE_PASSWORD")
+SNOWFLAKE_ACCOUNT = os.getenv("SNOWFLAKE_ACCOUNT")
+SNOWFLAKE_WAREHOUSE = os.getenv("SNOWFLAKE_WAREHOUSE")
+SNOWFLAKE_DATABASE = os.getenv("SNOWFLAKE_DATABASE")
+SNOWFLAKE_SCHEMA = os.getenv("SNOWFLAKE_SCHEMA")
+SNOWFLAKE_TABLE = os.getenv("SNOWFLAKE_TABLE")
+
+# Validate credentials
+if not all([SNOWFLAKE_USER, SNOWFLAKE_PASSWORD, SNOWFLAKE_ACCOUNT,
+            SNOWFLAKE_WAREHOUSE, SNOWFLAKE_DATABASE, SNOWFLAKE_SCHEMA, SNOWFLAKE_TABLE]):
+    raise ValueError("❌ Missing Snowflake credentials in environment variables.")
+
+def write_to_snowflake(data: pd.DataFrame):
     """
-    Connect to Snowflake using environment variables.
-    These should be stored as secrets in GitHub Actions or environment variables locally.
+    Writes a pandas DataFrame to Snowflake table defined in .env
     """
-    return snowflake.connector.connect(
-        user=os.environ["SNOWFLAKE_USER"],
-        password=os.environ["SNOWFLAKE_PASSWORD"],
-        account=os.environ["SNOWFLAKE_ACCOUNT"],
-        warehouse=os.environ.get("SNOWFLAKE_WAREHOUSE", "TRANSFORMING"),
-        database=os.environ.get("SNOWFLAKE_DATABASE", "PROD_CANDELARENEWABLES_DWH"),
-        schema=os.environ.get("SNOWFLAKE_SCHEMA", "API_INGEST")
+    # Connect to Snowflake
+    conn = snowflake.connector.connect(
+        user=SNOWFLAKE_USER,
+        password=SNOWFLAKE_PASSWORD,
+        account=SNOWFLAKE_ACCOUNT,
+        warehouse=SNOWFLAKE_WAREHOUSE,
+        database=SNOWFLAKE_DATABASE,
+        schema=SNOWFLAKE_SCHEMA
     )
 
+    cursor = conn.cursor()
 
-def load_to_snowflake(rows):
-    """
-    Inserts API data into the Snowflake table api_ingest.raw_data.
+    # Optional: create schema if it doesn't exist
+    cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {SNOWFLAKE_SCHEMA}")
 
-    Args:
-        rows (list of dict): Each dict represents one record from the API.
-            Expected keys: id, external_id, total_amount, created_at
-    """
+    # Optional: truncate table before inserting
+    cursor.execute(f"TRUNCATE TABLE IF EXISTS {SNOWFLAKE_SCHEMA}.{SNOWFLAKE_TABLE}")
 
-    if not rows:
-        print("No rows to insert — skipping Snowflake load.")
-        return
+    # Write data row by row
+    for index, row in data.iterrows():
+        cursor.execute(
+            f"""
+            INSERT INTO {SNOWFLAKE_SCHEMA}.{SNOWFLAKE_TABLE} (id, external_id, total_amount, created_at)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (row['id'], row['external_id'], row['total_amount'], row['created_at'])
+        )
 
-    conn = get_snowflake_conn_from_env()
-    cur = conn.cursor()
+    conn.commit()
+    cursor.close()
+    conn.close()
+    print(f"✅ Inserted {len(data)} rows into {SNOWFLAKE_SCHEMA}.{SNOWFLAKE_TABLE}")
 
-    try:
-        # Create schema if needed
-        cur.execute("CREATE SCHEMA IF NOT EXISTS api_ingest")
-
-        # Create table if needed (optional)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS api_ingest.raw_data (
-                id STRING,
-                external_id STRING,
-                total_amount FLOAT,
-                created_at TIMESTAMP_NTZ
-            )
-        """)
-
-        # Insert rows
-        insert_query = """
-            INSERT INTO api_ingest.raw_data (id, external_id, total_amount, created_at)
-            VALUES (%(id)s, %(external_id)s, %(total_amount)s, %(created_at)s)
-        """
-        cur.executemany(insert_query, rows)
-
-        conn.commit()
-        print(f"✅ Successfully inserted {len(rows)} rows into api_ingest.raw_data")
-
-    except Exception as e:
-        print("❌ Error loading data to Snowflake:", e)
-        conn.rollback()
-
-    finally:
-        cur.close()
-        conn.close()
-
-
-# Optional test — lets you run this file standalone
+# Optional: run as script for testing
 if __name__ == "__main__":
-    # Example test row (replace with real data)
-    sample_rows = [
-        {"id": "123", "external_id": "ABC123", "total_amount": 100.50, "created_at": "2025-10-22T00:00:00Z"}
-    ]
-    load_to_snowflake(sample_rows)
+    # Example test data
+    test_df = pd.DataFrame([{
+        "id": 1,
+        "external_id": "ABC123",
+        "total_amount": 100.50,
+        "created_at": "2025-10-22"
+    }])
+    write_to_snowflake(test_df)
