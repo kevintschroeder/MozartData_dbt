@@ -16,19 +16,20 @@ def fetch(access_token, root_org_unit_id):
     
     # GraphQL query (modify this based on the data you need)
     query = """
-    {
-        invoices {
-            edges {
-                node {
-                    id
-                    externalId
-                    totalAmount
-                    createdAt
-                }
-            }
-        }
+{
+  invoices(where: {}) {
+    edges {
+      node {
+        id
+        externalId
+        created
+        # Replace totalAmount with the correct numeric field, e.g., amount
+      }
     }
-    """
+  }
+}
+"""
+
     
     # Headers for API request
     headers = {
