@@ -2,69 +2,55 @@
 import os
 import pandas as pd
 import snowflake.connector
-from dotenv import load_dotenv
 
-# Load environment variables from .env
-load_dotenv()
-
-# Read Snowflake credentials from environment variables
-SNOWFLAKE_USER = os.getenv("SNOWFLAKE_USER")
-SNOWFLAKE_PASSWORD = os.getenv("SNOWFLAKE_PASSWORD")
-SNOWFLAKE_ACCOUNT = os.getenv("SNOWFLAKE_ACCOUNT")
-SNOWFLAKE_WAREHOUSE = os.getenv("SNOWFLAKE_WAREHOUSE")
-SNOWFLAKE_DATABASE = os.getenv("SNOWFLAKE_DATABASE")
-SNOWFLAKE_SCHEMA = os.getenv("SNOWFLAKE_SCHEMA")
-SNOWFLAKE_TABLE = os.getenv("SNOWFLAKE_TABLE")
-
-# Validate credentials
-if not all([SNOWFLAKE_USER, SNOWFLAKE_PASSWORD, SNOWFLAKE_ACCOUNT,
-            SNOWFLAKE_WAREHOUSE, SNOWFLAKE_DATABASE, SNOWFLAKE_SCHEMA, SNOWFLAKE_TABLE]):
-    raise ValueError("❌ Missing Snowflake credentials in environment variables.")
-
-def write_to_snowflake(data: pd.DataFrame):
+def write_to_snowflake(data: pd.DataFrame, config: dict):
     """
-    Writes a pandas DataFrame to Snowflake table defined in .env
+    Writes a pandas DataFrame to Snowflake (Mozart warehouse).
+
+    Args:
+        data (pd.DataFrame): DataFrame containing rows to insert.
+        config (dict): Dictionary containing Snowflake credentials and target table info.
+            Expected keys: user, password, account, warehouse, database, schema, table
     """
     # Connect to Snowflake
     conn = snowflake.connector.connect(
-        user=SNOWFLAKE_USER,
-        password=SNOWFLAKE_PASSWORD,
-        account=SNOWFLAKE_ACCOUNT,
-        warehouse=SNOWFLAKE_WAREHOUSE,
-        database=SNOWFLAKE_DATABASE,
-        schema=SNOWFLAKE_SCHEMA
+        user=config["user"],
+        password=config["password"],
+        account=config["account"],
+        warehouse=config["warehouse"],
+        database=config["database"],
+        schema=config["schema"]
     )
 
     cursor = conn.cursor()
 
     # Optional: create schema if it doesn't exist
-    cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {SNOWFLAKE_SCHEMA}")
+    cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {config['schema']}")
 
-    # Optional: truncate table before inserting
-    cursor.execute(f"TRUNCATE TABLE IF EXISTS {SNOWFLAKE_SCHEMA}.{SNOWFLAKE_TABLE}")
+    # Optional: create table if it doesn't exist
+    cursor.execute(f"""
+        CREATE TABLE IF NOT EXISTS {config['schema']}.{config['table']} (
+            id STRING,
+            external_id STRING,
+            total_amount FLOAT,
+            created_at TIMESTAMP
+        )
+    """)
 
-    # Write data row by row
-    for index, row in data.iterrows():
+    # Insert rows using parameterized queries
+    insert_sql = f"""
+        INSERT INTO {config['schema']}.{config['table']} (id, external_id, total_amount, created_at)
+        VALUES (%s, %s, %s, %s)
+    """
+
+    for _, row in data.iterrows():
         cursor.execute(
-            f"""
-            INSERT INTO {SNOWFLAKE_SCHEMA}.{SNOWFLAKE_TABLE} (id, external_id, total_amount, created_at)
-            VALUES (%s, %s, %s, %s)
-            """,
+            insert_sql,
             (row['id'], row['external_id'], row['total_amount'], row['created_at'])
         )
 
     conn.commit()
     cursor.close()
     conn.close()
-    print(f"✅ Inserted {len(data)} rows into {SNOWFLAKE_SCHEMA}.{SNOWFLAKE_TABLE}")
 
-# Optional: run as script for testing
-if __name__ == "__main__":
-    # Example test data
-    test_df = pd.DataFrame([{
-        "id": 1,
-        "external_id": "ABC123",
-        "total_amount": 100.50,
-        "created_at": "2025-10-22"
-    }])
-    write_to_snowflake(test_df)
+    print(f"✅ Inserted {len(data)} rows into {config['schema']}.{config['table']}")
