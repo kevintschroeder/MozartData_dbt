@@ -1,42 +1,55 @@
+# login.py
 import requests
 import json
+import os
+
 
 def get_token():
     """
-    Logs in to Beanworks and returns the access token and root org unit ID.
+    Authenticates with the Beanworks API and returns an access token + root org unit ID.
+    
+    Environment variables required:
+        BEANWORKS_USERNAME
+        BEANWORKS_PASSWORD
     """
-    # GraphQL endpoint URL
-    url_signin = 'https://beanworks.ca/signin'
 
-    # Login credentials
+    url_signin = "https://beanworks.ca/signin"
+
+    username = os.environ.get("BEANWORKS_USERNAME")
+    password = os.environ.get("BEANWORKS_PASSWORD")
+
+    if not username or not password:
+        raise ValueError("Missing BEANWORKS_USERNAME or BEANWORKS_PASSWORD environment variable")
+
     data = {
-        'username': 'kevin.schroedre@candelarenewables.com',
-        'password': 'Ry@n20191122',
+        "username": username,
+        "password": password
     }
 
-    # Request headers
     headers = {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        "Content-Type": "application/x-www-form-urlencoded",
     }
 
-    # Send POST request
     response = requests.post(url_signin, data=data, headers=headers)
 
-    # Parse JSON response
+    if response.status_code != 200:
+        raise Exception(f"Login failed: {response.status_code}\n{response.text}")
+
     parsed_response = json.loads(response.text)
 
-    # Extract token and root org unit ID
-    access_token = parsed_response.get("accessToken", "")
-    root_org_unit_id = parsed_response.get("rootOrgUnitId", "")
+    access_token = parsed_response.get("accessToken")
+    root_org_unit_id = parsed_response.get("rootOrgUnitId")
 
-    # Optional: print for verification
-    print(f"Access Token: {access_token}")
-    print(f"Root Org Unit ID: {root_org_unit_id}")
+    if not access_token or not root_org_unit_id:
+        raise Exception("Login response did not contain accessToken or rootOrgUnitId")
 
-    # Return values so they can be used by other scripts
+    print("✅ Successfully authenticated with Beanworks API")
+
     return access_token, root_org_unit_id
 
 
-# Optional: run standalone for testing
+# Optional: allow testing this script standalone
 if __name__ == "__main__":
     token, rouid = get_token()
+    print(f"Access token (first 20 chars): {token[:20]}...")
+    print(f"Root Org Unit ID: {rouid}")
