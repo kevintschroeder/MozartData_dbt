@@ -31,10 +31,10 @@ def main():
 
     # Snowflake (Mozart Data) connection settings
     snowflake_config = {
-        "user": "YOUR_USER",              # ❗ Replace or use environment variables
-        "password": "YOUR_PASSWORD",      # ❗ Replace or use environment variables
-        "account": "YOUR_ACCOUNT",        # e.g., xy12345.us-east-1
-        "warehouse": "YOUR_WAREHOUSE",
+        "user": "KEVIN_ADMIN",              
+        "password": os.getenv("SNOWFLAKE_PASSWORD"),      
+        "account": "MOZARTDATA-MOZARTNDOA",        
+        "warehouse": "PROD_CANDELARENEWABLES_DWH",
         "database": "PROD_CANDELARENEWABLES_DWH",
         "schema": "API_INGEST",
         "table": "RAW_DATA"
