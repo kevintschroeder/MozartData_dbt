@@ -44,28 +44,13 @@ def fetch(access_token, root_org_unit_id):
     
     # Check if request was successful
     if response.status_code != 200:
-        raise Exception(f"GraphQL query failed: {response.status_code}\n{response.text}")
+        print(f"❌ GraphQL query failed with status {response.status_code}")
+        print(response.text)
+        raise Exception("Stopping because of API error.")
     
     # Parse JSON response
     result = response.json()
-    
-    # Extract the data into a list of rows
-    rows = []
-    for edge in result['data']['invoices']['edges']:
-        node = edge['node']
-        rows.append({
-            'id': node.get('id'),
-            'external_id': node.get('externalId'),
-            'total_amount': node.get('totalAmount'),
-            'created_at': node.get('createdAt')
-        })
-    
-    print(f"Fetched {len(rows)} rows from API.")
-    return rows
 
-
-# Optional: test standalone
-if __name__ == "__main__":
-    from login import get_token
-    token, rouid = get_token()
-    fetch(token, rouid)
+    # 🚨 Debug: print the full response to see what we get
+    print("🔍 Full API response:")
+    print(json.dumps(r
