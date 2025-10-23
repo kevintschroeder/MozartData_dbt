@@ -1,15 +1,32 @@
 # .gitignore
 
+# ---- ENV & Credentials ----
+.env
+*.env
+codes.env
+
+# ---- Python ----
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.db
+*.log
 
-# Virtual environments
-venv/
-.env/
-
-# Jupyter checkpoints
+# ---- Jupyter ----
 .ipynb_checkpoints/
+*.ipynb
 
-# OS junk
+# ---- VSCode / IDE ----
+.vscode/
+.idea/
+
+# ---- System / OS ----
 .DS_Store
 Thumbs.db
+
+# ---- Virtual Environments ----
+venv/
+.env/
+.venv/
+*.egg-info/
