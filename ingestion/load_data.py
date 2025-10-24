@@ -8,10 +8,17 @@ def write_to_snowflake(data: pd.DataFrame, config: dict):
     Writes a pandas DataFrame to Snowflake (Mozart warehouse).
 
     Args:
-        data (pd.DataFrame): DataFrame containing rows to insert.
-        config (dict): Dictionary containing Snowflake credentials and target table info.
-            Expected keys: user, password, account, warehouse, database, schema, table
+        data (pd.DataFrame): Data to insert.
+        config (dict): Dictionary with Snowflake credentials:
+            user, password, account, warehouse, database, schema, table
     """
+
+    # Ensure all required keys exist
+    required_keys = ["user", "password", "account", "warehouse", "database", "schema", "table"]
+    missing = [k for k in required_keys if k not in config]
+    if missing:
+        raise ValueError(f"❌ Missing Snowflake credentials/config keys: {missing}")
+
     # Connect to Snowflake
     conn = snowflake.connector.connect(
         user=config["user"],
@@ -27,30 +34,21 @@ def write_to_snowflake(data: pd.DataFrame, config: dict):
     # Optional: create schema if it doesn't exist
     cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {config['schema']}")
 
-    # Optional: create table if it doesn't exist
-    cursor.execute(f"""
-        CREATE TABLE IF NOT EXISTS {config['schema']}.{config['table']} (
-            id STRING,
-            external_id STRING,
-            total_amount FLOAT,
-            created_at TIMESTAMP
-        )
-    """)
+    # Optional: drop table if overwriting
+    # cursor.execute(f"DROP TABLE IF EXISTS {config['schema']}.{config['table']}")
 
-    # Insert rows using parameterized queries
-    insert_sql = f"""
-        INSERT INTO {config['schema']}.{config['table']} (id, external_id, total_amount, created_at)
-        VALUES (%s, %s, %s, %s)
-    """
-
-    for _, row in data.iterrows():
+    # Write data to Snowflake
+    for index, row in data.iterrows():
         cursor.execute(
-            insert_sql,
-            (row['id'], row['external_id'], row['total_amount'], row['created_at'])
+            f"""
+            INSERT INTO {config['schema']}.{config['table']} 
+            (id, external_id, amount, created)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (row['id'], row['external_id'], row['amount'], row['created'])
         )
 
     conn.commit()
     cursor.close()
     conn.close()
-
     print(f"✅ Inserted {len(data)} rows into {config['schema']}.{config['table']}")
