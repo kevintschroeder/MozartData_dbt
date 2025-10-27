@@ -42,10 +42,10 @@ def write_to_snowflake(data: pd.DataFrame, config: dict):
         cursor.execute(
             f"""
             INSERT INTO {config['schema']}.{config['table']} 
-            (id, external_id, amount, created)
-            VALUES (%s, %s, %s, %s)
+            (id, invnumber, externalid, ponumber, status, paidstatus, 	 	    alreadypaidamount, total, created)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (row['id'], row['external_id'], row['amount'], row['created'])
+            (row['id'], row['invnumber'], row['externalid'], row['ponumber'], 	    row['status'], row['paidstatus'], row['alreadypaidamount'], 	    row['total'], row['created'])
         )
 
     conn.commit()
