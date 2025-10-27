@@ -1,32 +1,40 @@
 # fetch_data.py
 import requests
 import json
+import pandas as pd
 
 def fetch(access_token, root_org_unit_id):
     """
     Fetch data from Beanworks API using access token and root org unit ID.
-
+    
     Returns:
-        rows (list of dicts): each dict represents a row to insert into Snowflake.
+        df (pandas DataFrame): each row represents a record to insert into Snowflake.
     """
 
     # GraphQL endpoint
     url_api = 'https://beanworks.ca/api/graphql/'
     url_with_rouid = f'{url_api}?rouid={root_org_unit_id}'
 
-    # Updated GraphQL query with correct field names
+    # GraphQL query with a minimal 'where' argument (required by API)
     query = """
     {
-        invoices(where: {}) {
-            edges {
-                node {
-                    id
-                    externalId
-                    amount        # Corrected field
-                    created       # Corrected field
-                }
-            }
+      invoices(where: {
+	updated: { _gt: "2025-10-15T00:00:00Z" }
+      }) {
+        edges {
+          node {
+            id
+            number
+	    externalId
+            poNumber
+	    status
+	    paidStatus
+	    alreadyPaidAmount
+	    created
+            total
+          }
         }
+      }
     }
     """
 
@@ -49,11 +57,11 @@ def fetch(access_token, root_org_unit_id):
     # Parse JSON response
     result = response.json()
 
-    # Make sure 'data' exists in response
-    if 'data' not in result or 'invoices' not in result['data']:
-        print("🔍 Full API response:")
+    # Debug: show full response if 'data' key is missing
+    if 'data' not in result:
+        print("❌ Full API response:")
         print(json.dumps(result, indent=2))
-        raise KeyError("❌ 'data' key missing in response — check your API query or token.")
+        raise KeyError("'data' key missing in response — check your API query or token.")
 
     # Extract the data into a list of rows
     rows = []
@@ -61,16 +69,26 @@ def fetch(access_token, root_org_unit_id):
         node = edge['node']
         rows.append({
             'id': node.get('id'),
-            'external_id': node.get('externalId'),
-            'amount': node.get('amount'),
-            'created': node.get('created')
+            'invnumber': node.get('number'),
+	    'externalid': node.get('externalId'),
+            'ponumber': node.get('poNumber'),
+	    'status': node.get('status'),
+	    'paidstatus': node.get('paidStatus'),
+	    'alreadypaidamount': node.get('alreadyPaidAmount'),
+	    'created': node.get('created'),
+            'total': node.get('total')
         })
 
-    print(f"Fetched {len(rows)} rows from API.")
-    return rows
+    # Convert list of dicts into a pandas DataFrame (NEW)
+    df = pd.DataFrame(rows)
+
+    print(f"Fetched {len(df)} rows from API.")
+    return df
+
 
 # Optional: test standalone
 if __name__ == "__main__":
     from login import get_token
     token, rouid = get_token()
-    fetch(token, rouid)
+    df = fetch(token, rouid)
+    print(df.head())
